@@ -7,10 +7,15 @@ name: Docker Publish
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.txt'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.txt'
 
 env:
   # github.repository as <account>/<repo>
@@ -29,11 +34,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Log into registry ${{ env.REGISTRY }}
+      - name: Log into registry Docker Hub
         if: github.event_name != 'pull_request'
         uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
         with:
-          registry: ${{ env.REGISTRY }}
           username: mwelke
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
