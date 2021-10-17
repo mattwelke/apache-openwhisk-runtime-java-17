@@ -21,7 +21,7 @@ on:
 
 env:
   # github.repository as <account>/<repo>
-  IMAGE_NAME: mwelke/ow-extended-runtimes-java-17
+  IMAGE_NAME: ow-extended-runtimes/java-17
 
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
         with:
-          username: mwelke
+          username: ow-extended-runtimes
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Create tag
