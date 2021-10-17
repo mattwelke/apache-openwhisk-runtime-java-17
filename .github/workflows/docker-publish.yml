@@ -14,7 +14,7 @@ on:
 
 env:
   # github.repository as <account>/<repo>
-  IMAGE_NAME: mwelke/apache-openwhisk-runtime-java-17
+  IMAGE_NAME: mwelke/ow-extended-runtimes-java-17
 
 
 jobs:
