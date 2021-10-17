@@ -8,7 +8,7 @@ name: Docker Publish
 on:
   push:
     branches:
-      - alpha
+      - main
   pull_request:
     branches: [ main ]
 
