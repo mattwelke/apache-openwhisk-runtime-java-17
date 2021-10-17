@@ -11,11 +11,13 @@ on:
     paths-ignore:
       - '**/*.md'
       - '**/*.txt'
+      - '.github/workflows/codeql-analysis.yml'
   pull_request:
     branches: [ main ]
     paths-ignore:
       - '**/*.md'
       - '**/*.txt'
+      - '.github/workflows/codeql-analysis.yml'
 
 env:
   # github.repository as <account>/<repo>

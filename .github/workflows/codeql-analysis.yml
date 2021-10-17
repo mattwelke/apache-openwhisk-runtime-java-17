@@ -6,11 +6,13 @@ on:
     paths-ignore:
       - '**/*.md'
       - '**/*.txt'
+      - '.github/workflows/docker-publish.yml'
   pull_request:
     branches: [ main ]
     paths-ignore:
       - '**/*.md'
       - '**/*.txt'
+      - '.github/workflows/docker-publish.yml'
   schedule:
     - cron: '24 1 7,14,21,28 * *'
 
