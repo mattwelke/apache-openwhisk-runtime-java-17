@@ -7,9 +7,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -25,6 +24,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.owextendedruntimes.actiontest.Action;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -40,6 +40,8 @@ public class Proxy {
     private HttpServer server;
 
     private JarLoader loader = null;
+
+    private Action userAction = null;
 
     public Proxy(int port) throws IOException {
         this.server = HttpServer.create(new InetSocketAddress(port), -1);
@@ -150,7 +152,8 @@ public class Proxy {
                 System.setSecurityManager(new WhiskSecurityManager());
 
                 // User code starts running here.
-                Map<String, Object> output = loader.invokeMain(value, owVars);
+                userAction.setClusterContext(owVars);
+                Map<String, Object> output = userAction.invoke(value);
                 // User code finished running here.
 
                 if (output == null) {
@@ -158,13 +161,6 @@ public class Proxy {
                 }
 
                 Proxy.writeResponse(t, 200, new Gson().toJson(output));
-            } catch (InvocationTargetException ite) {
-                // These are exceptions from the action, wrapped in ite because
-                // of reflection
-                Throwable underlying = ite.getCause();
-                underlying.printStackTrace(System.err);
-                Proxy.writeError(t,
-                        "An error has occurred while invoking the action (see logs for details): " + underlying);
             } catch (Exception e) {
                 e.printStackTrace(System.err);
                 Proxy.writeError(t, "An error has occurred (see logs for details): " + e);
@@ -180,9 +176,7 @@ public class Proxy {
      * Custom JAR loader.
      * Based on https://github.com/apache/openwhisk-runtime-java/blob/master/core/java8/proxy/src/main/java/org/apache/openwhisk/runtime/java/action/JarLoader.java
      */
-    private static class JarLoader extends URLClassLoader {
-        private final Method mainMethod;
-
+    private class JarLoader extends URLClassLoader {
         public static Path saveBase64EncodedFile(InputStream encoded) throws Exception {
             Base64.Decoder decoder = Base64.getDecoder();
 
@@ -197,27 +191,18 @@ public class Proxy {
             return destinationPath;
         }
 
-        public JarLoader(Path jarPath, String entrypoint)
-                throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, SecurityException {
+        public JarLoader(Path jarPath, String actionClassName)
+                throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, SecurityException,
+                InvocationTargetException, InstantiationException, IllegalAccessException {
+
             super(new URL[] { jarPath.toUri().toURL() });
 
-            final String[] splitEntrypoint = entrypoint.split("#");
-            final String entrypointClassName = splitEntrypoint[0];
-            final String entrypointMethodName = splitEntrypoint.length > 1 ? splitEntrypoint[1] : "main";
+            // Use reflection to create an instance of the user's action.
+            Class<? extends Action> actionClass = loadClass(actionClassName).asSubclass(Action.class);
+            Constructor<? extends Action> actionClassConstructor = actionClass.getConstructor();
 
-            Class<?> mainClass = loadClass(entrypointClassName);
-
-            Method m = mainClass.getMethod(entrypointMethodName, new Class[] { Map.class, Map.class });
-            m.setAccessible(true);
-            int modifiers = m.getModifiers();
-            if (m.getReturnType() != Map.class || !Modifier.isStatic(modifiers) || !Modifier.isPublic(modifiers)) {
-                throw new NoSuchMethodException("main");
-            }
-            this.mainMethod = m;
-        }
-
-        public Map<String, Object> invokeMain(Map<String, Object> value, Map<String, Object> owVars) throws Exception {
-            return (Map<String, Object>) mainMethod.invoke(null, value, owVars);
+            // Associate action instance with Proxy instance so that it can be used in the run handler.
+            Proxy.this.userAction = actionClassConstructor.newInstance();
         }
     }
 
