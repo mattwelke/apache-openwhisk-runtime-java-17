@@ -44,6 +44,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Create tag
+        if: github.event_name != 'pull_request'
         id: create_tag
         run: |
           TAG="${{ env.IMAGE_NAME }}:$(TZ="UTC (UTC)" printf "%(%Y%m%d%H%M)T")"
@@ -51,6 +52,7 @@ jobs:
           echo "::set-output name=tag::$TAG"
 
       - name: Build and push Docker image
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
           context: .
